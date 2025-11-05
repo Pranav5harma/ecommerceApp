@@ -1,0 +1,74 @@
+# ==========================
+# === BACKEND (Spring Boot)
+# ==========================
+
+# Maven / Gradle
+/backend/target/
+/backend/.gradle/
+/backend/build/
+/backend/dependency-reduced-pom.xml
+
+# IDEs
+/backend/.idea/
+/backend/.vscode/
+/backend/*.iml
+/backend/*.ipr
+/backend/*.iws
+/backend/.settings/
+/backend/bin/
+/backend/out/
+
+# Logs and environment
+/backend/*.log
+/backend/logs/
+/backend/.env
+
+# OS files
+/backend/.DS_Store
+/backend/Thumbs.db
+
+
+# ==========================
+# === FRONTEND (Angular)
+# ==========================
+
+# Node modules & build
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.angular/
+/frontend/tmp/
+/frontend/out-tsc/
+
+# Environment files
+/frontend/src/environments/environment*.ts
+
+# Logs
+/frontend/npm-debug.log*
+/frontend/yarn-error.log*
+/frontend/package-lock.json
+/frontend/yarn.lock
+
+# IDEs
+/frontend/.idea/
+/frontend/.vscode/
+/frontend/*.iml
+
+# OS files
+/frontend/.DS_Store
+/frontend/Thumbs.db
+
+
+# ==========================
+# === GLOBAL / ROOT LEVEL
+# ==========================
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Misc
+*.log
