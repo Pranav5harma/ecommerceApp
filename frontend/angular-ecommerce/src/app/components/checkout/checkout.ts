@@ -1,0 +1,188 @@
+import { Component } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AppFormService } from '../../services/app-form.service';
+import { Country } from '../../common/country';
+import { State } from '../../common/state';
+import { AppValidators } from '../../validators/app-validators';
+import { CartService } from '../../services/cart.service';
+
+@Component({
+  selector: 'app-checkout',
+  standalone: false,
+  templateUrl: './checkout.html',
+  styleUrl: './checkout.css',
+})
+export class Checkout {
+
+  checkoutFormGroup!: FormGroup;
+
+  totalPrice: number = 0;
+  totalQuantity: number = 0;
+
+  creditCardYears: number[] = [];
+  creditCardMonths: number[] = [];
+
+  countries: Country[] = [];
+  billingAddressStates: State[] = [];
+  shippingAddressStates: State[] = [];
+
+  constructor(private formBuilder: FormBuilder,
+    private appFormService: AppFormService,
+    private cartService: CartService) {
+  }
+
+  ngOnInit(): void {
+
+    this.reviewCartDetails();
+
+
+    this.checkoutFormGroup = this.formBuilder.group({
+      customer: this.formBuilder.group({
+        firstName: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        lastName: new FormControl('', [Validators.required, Validators.minLength(2) , AppValidators.notOnlyWhitespace]),
+        email: new FormControl('', [Validators.required, Validators.pattern('^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,4}$')])
+      }),
+      shippingAddress: this.formBuilder.group({
+        street: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        city: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        state: new FormControl('', [Validators.required]),
+        country: new FormControl('', [Validators.required]),
+        zipCode: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace])
+      }),
+      billingAddress: this.formBuilder.group({
+        street: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        city: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        state: new FormControl('', [Validators.required]),
+        country: new FormControl('', [Validators.required]),
+        zipCode: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace])
+      }),
+      creditCard: this.formBuilder.group({
+        cardType: new FormControl('', [Validators.required]),
+        nameOnCard: new FormControl('', [Validators.required, Validators.minLength(2), AppValidators.notOnlyWhitespace]),
+        cardNumber: new FormControl('', [Validators.required, Validators.pattern('[0-9]{16}')]),
+        securityCode: new FormControl('', [Validators.required, Validators.pattern('[0-9]{3}')]),
+        expirationMonth: [''],
+        expirationYear: ['']
+      })
+    });
+
+    //populate credit card months
+    const startMonth: number = new Date().getMonth() + 1;
+    this.appFormService.getCreditCardMonths(startMonth).subscribe(
+      data => {
+        this.creditCardMonths = data;
+      }
+    )
+
+    //populate credit card years
+    this.appFormService.getCreditCardYears().subscribe(
+      data => {
+        this.creditCardYears = data;
+      }
+    )
+
+    //populate countries
+    this.appFormService.getCountries().subscribe(
+      data => {
+        this.countries = data;
+      }
+    )
+
+  }
+
+  reviewCartDetails(){
+    this.cartService.totalQuantity.subscribe(
+      totalQuantity => this.totalQuantity = totalQuantity
+    )
+
+    this.cartService.totalPrice.subscribe(
+      totalPrice => this.totalPrice = totalPrice
+    )
+  }
+
+  get firstName(){return this.checkoutFormGroup.get('customer.firstName');}
+  get lastName(){return this.checkoutFormGroup.get('customer.lastName');}
+  get email(){return this.checkoutFormGroup.get('customer.email');}
+
+  get shippingAddressStreet(){return this.checkoutFormGroup.get('shippingAddress.street');}
+  get shippingAddressCity(){return this.checkoutFormGroup.get('shippingAddress.city');}
+  get shippingAddressState(){return this.checkoutFormGroup.get('shippingAddress.state');}
+  get shippingAddressZipCode(){return this.checkoutFormGroup.get('shippingAddress.zipCode');}
+  get shippingAddressCountry(){return this.checkoutFormGroup.get('shippingAddress.country');}
+
+  get billingAddressStreet(){return this.checkoutFormGroup.get('billingAddress.street');}
+  get billingAddressCity(){return this.checkoutFormGroup.get('billingAddress.city');}
+  get billingAddressState(){return this.checkoutFormGroup.get('billingAddress.state');}
+  get billingAddressZipCode(){return this.checkoutFormGroup.get('billingAddress.zipCode');}
+  get billingAddressCountry(){return this.checkoutFormGroup.get('billingAddress.country');}
+
+  get creditCardType(){return this.checkoutFormGroup.get('creditCard.cardType')}
+  get creditCardNameOnCard(){return this.checkoutFormGroup.get('creditCard.nameOnCard')}
+  get creditCardNumber(){return this.checkoutFormGroup.get('creditCard.cardNumber')}
+  get creditCardSecurityCode(){return this.checkoutFormGroup.get('creditCard.securityCode')}
+
+  copyShippingAddressToBillingAddress(event: any) {
+    if (event.target.checked) {
+      this.checkoutFormGroup.get('billingAddress')!
+        .setValue(this.checkoutFormGroup.get('shippingAddress')!.value);
+
+      this.billingAddressStates = this.shippingAddressStates;
+    } else {
+      this.checkoutFormGroup.get('billingAddress')!.reset();
+      this.billingAddressStates = [];
+    }
+
+  }
+
+  handleMonthsAndYears() {
+    const creditCardFormGroup = this.checkoutFormGroup.get('creditCard')!;
+    const selectedYear = Number(creditCardFormGroup.get('expirationYear')?.value);
+
+    const currentYear = new Date().getFullYear();
+    let startMonth: number;
+
+    if (selectedYear === currentYear) {
+      // If selected year is the current year → start from the current month
+      startMonth = new Date().getMonth() + 1;
+    } else {
+      // If a future year is selected → start from January
+      startMonth = 1;
+    }
+
+    this.appFormService.getCreditCardMonths(startMonth).subscribe((data) => {
+      this.creditCardMonths = data;
+    });
+  }
+
+
+  getStates(formGroupName: string) {
+    const formGroup = this.checkoutFormGroup.get(formGroupName)
+    const countryCode = formGroup?.value.country.code;
+    const countryName = formGroup?.value.country.name;
+
+    this.appFormService.getStates(countryCode).subscribe(
+      data => {
+        if (formGroupName === 'shippingAddress') {
+          this.shippingAddressStates = data;
+        } else {
+          this.billingAddressStates = data;
+        }
+
+        formGroup?.get('state')?.setValue(data[0])
+      }
+    );
+
+  }
+
+  onSubmit() {
+
+    if(this.checkoutFormGroup.invalid){
+      this.checkoutFormGroup.markAllAsTouched();
+    }
+
+    console.log("Handling the submit button");
+    console.log(this.checkoutFormGroup.get('customer')!.value)
+  }
+
+
+}
