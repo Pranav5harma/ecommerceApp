@@ -5,6 +5,13 @@ import { Country } from '../../common/country';
 import { State } from '../../common/state';
 import { AppValidators } from '../../validators/app-validators';
 import { CartService } from '../../services/cart.service';
+import { CheckoutService } from '../../services/checkout.service';
+import { Router } from '@angular/router';
+import { Order } from '../../common/order';
+import { OrderItem } from '../../common/order-item';
+import { CartItem } from '../../common/cart-item';
+import { Purchase } from '../../common/purchase';
+import { publishFacade } from '@angular/compiler';
 
 @Component({
   selector: 'app-checkout',
@@ -28,7 +35,9 @@ export class Checkout {
 
   constructor(private formBuilder: FormBuilder,
     private appFormService: AppFormService,
-    private cartService: CartService) {
+    private cartService: CartService,
+    private checkoutService: CheckoutService,
+    private router: Router) {
   }
 
   ngOnInit(): void {
@@ -174,14 +183,65 @@ export class Checkout {
 
   }
 
+  resetCart(){
+    // reset cart data
+    this.cartService.cartItems.clear();
+    this.cartService.totalPrice.next(0);
+    this.cartService.totalQuantity.next(0);
+    // rest the form
+    this.checkoutFormGroup.reset();
+
+    // navigate back to the products page
+    this.router.navigateByUrl("/products");
+  }
+
   onSubmit() {
 
     if(this.checkoutFormGroup.invalid){
       this.checkoutFormGroup.markAllAsTouched();
+      return;
     }
 
-    console.log("Handling the submit button");
-    console.log(this.checkoutFormGroup.get('customer')!.value)
+    // set up order
+    let order = new Order();
+    order.totalPrice = this.totalPrice;
+    order. totalQuantity = this.totalQuantity
+    // get cart items
+    const cartItems: CartItem[] = Array.from(this.cartService.cartItems.values());
+    // create orderItems from cartItems
+    let orderItems: OrderItem[] = cartItems.map(tempCartItem => new OrderItem(tempCartItem));
+    // set up purchase
+    let purchase = new Purchase();
+    // populate purchase - customer
+    purchase.customer = this.checkoutFormGroup.controls['customer'].value;
+
+    // populate purchase - shipping address
+    purchase.shippingAddress = this.checkoutFormGroup.controls['shippingAddress'].value;
+    purchase.shippingAddress.state = this.checkoutFormGroup.controls['shippingAddress'].value.state.name
+    purchase.shippingAddress.country = this.checkoutFormGroup.controls['shippingAddress'].value.country.name
+    
+    // populate purchase - billing address
+
+    purchase.billingAddress = this.checkoutFormGroup.controls['billingAddress'].value;
+    purchase.billingAddress.state = this.checkoutFormGroup.controls['billingAddress'].value.state.name
+    purchase.billingAddress.country = this.checkoutFormGroup.controls['billingAddress'].value.country.name;
+    
+    // populate purchase - order and orderItems
+    purchase.order = order;
+    purchase.orderItems = orderItems;
+
+    // call REST API via the CheckoutService
+    this.checkoutService.placeOrder(purchase).subscribe({
+        next: response =>{
+          alert(`Your order has been received. \nOrder tracking number: ${response.orderTrackingNumber}`);
+          //reset the cart
+          this.resetCart();
+        },
+        error: err =>{
+          alert(`There was an error: ${err.message}`);
+        }
+      }
+    )
   }
 
 
