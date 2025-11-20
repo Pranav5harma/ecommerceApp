@@ -12,7 +12,19 @@ export class CartService {
   totalPrice: Subject<number> = new BehaviorSubject<number>(0)
   totalQuantity: Subject<number> = new BehaviorSubject<number>(0)
 
+  storage: Storage = sessionStorage;
+
   constructor() {
+    // read data from storage
+    let data = JSON.parse(this.storage.getItem('cartItems')!);
+
+    if (data != null) {
+      for (let item of data) {
+        this.cartItems.set(item.id, item);
+      }
+      // compute totals based on data that is read from storage
+      this.computeCartTotals();
+    }
   }
 
   addToCart(theCartItem: CartItem) {
@@ -43,6 +55,13 @@ export class CartService {
     // Publish new totals
     this.totalPrice.next(totalPriceValue);
     this.totalQuantity.next(totalQuantityValue);
+
+    // Persist cart items
+    this.persistCartItems();
+  }
+
+  persistCartItems() {
+    this.storage.setItem('cartItems', JSON.stringify(Array.from(this.cartItems.values())));
   }
 
   decrementQuantity(theCartItem: CartItem) {
